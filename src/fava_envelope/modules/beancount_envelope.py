@@ -226,7 +226,7 @@ class BeancountEnvelope:
                 budgeted = self.income_df.loc["Budgeted", future_month].sum()
 
                 self.income_df.loc["Budgeted Future", month] = Decimal(
-                    -1 * min(budgeted, sum_total))
+                    min(budgeted, sum_total))
 
         # Set to be budgeted
         for index, month in enumerate(months):
