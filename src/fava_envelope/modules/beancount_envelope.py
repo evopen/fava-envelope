@@ -5,6 +5,7 @@ import collections
 import datetime
 import logging
 import re
+from typing import List
 
 import pandas as pd
 from beancount.core import account_types
@@ -21,7 +22,7 @@ from dateutil.relativedelta import relativedelta
 
 
 class BeancountEnvelope:
-    def __init__(self, entries, options_map, currency):
+    def __init__(self, entries: List, options_map, currency: str):
 
         self.entries = entries
         self.options_map = options_map
@@ -34,13 +35,16 @@ class BeancountEnvelope:
         else:
             self.etype = "envelope"
 
+        settings = self._find_envelop_settings()
+        assert settings is not None
+
         (
             self.start_date,
             self.budget_accounts,
             self.mappings,
             self.income_accounts,
             self.months_ahead,
-        ) = self._find_envelop_settings()
+        ) = settings
 
         if not self.currency:
             self.currency = self._find_currency(options_map)
@@ -79,7 +83,7 @@ class BeancountEnvelope:
         return default_currency
 
     def _find_envelop_settings(self):
-        start_date = None
+        start_date: str | None = None
         budget_accounts = []
         mappings = []
         income_accounts = []
@@ -106,13 +110,14 @@ class BeancountEnvelope:
                         self.negative_rollover = True
                 if e.values[0].value == "months ahead":
                     months_ahead = int(e.values[1].value)
-        return (
-            start_date,
-            budget_accounts,
-            mappings,
-            income_accounts,
-            months_ahead,
-        )
+        if start_date is not None:
+            return (
+                start_date,
+                budget_accounts,
+                mappings,
+                income_accounts,
+                months_ahead,
+            )
 
     def envelope_tables(self):
 
@@ -286,6 +291,16 @@ class BeancountEnvelope:
                             posting.account,
                             amount.Amount(converted, self.currency),
                             posting.cost,
+                            None,
+                            posting.flag,
+                            posting.meta,
+                        )
+                    elif posting.cost is not None:
+                        converted = posting.cost.number * orig
+                        posting = data.Posting(
+                            posting.account,
+                            amount.Amount(converted, self.currency),
+                            None,
                             None,
                             posting.flag,
                             posting.meta,
